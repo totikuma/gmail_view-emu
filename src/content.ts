@@ -1,5 +1,6 @@
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'emulateGmail') {
+    console.log('Gmailレンダリングのエミュレートが開始されました。'); // デバッグログ出力
     const width = request.width;
     emulateGmailRendering(width);
   }

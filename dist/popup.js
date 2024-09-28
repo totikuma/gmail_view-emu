@@ -22,6 +22,7 @@ emulateButton.id = 'emulate';
 emulateButton.textContent = 'エミュレート';
 // イベントリスナーの設定
 emulateButton.addEventListener('click', () => {
+    console.log('エミュレートボタンがクリックされました。'); // デバッグログ出力
     const selectedWidth = widthSelect.value;
     // 現在のタブを取得
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
