@@ -38,7 +38,14 @@ emulateButton.addEventListener('click', () => {
                 chrome.tabs.sendMessage(newTab.id, {
                     action: 'emulateGmail',
                     width: selectedWidth
+                }, (response) => {
+                    console.log('コンテンツスクリプトからのレスポンス:', response); // レスポンスを受け取った時のログ
                 });
+                console.log('メッセージを送信しました:', newTab.id, {
+                    // 送信時のログ
+                    action: 'emulateGmail',
+                    width: selectedWidth
+                }); // デバッグログ出力
             }
             else {
                 // エラー処理 (例: コンソールにエラーメッセージを出力)

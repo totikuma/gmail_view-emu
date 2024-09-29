@@ -41,10 +41,21 @@ emulateButton.addEventListener('click', () => {
         // newTab.idがundefinedでないことを確認
         if (newTab.id !== undefined) {
           // コンテンツスクリプトにメッセージを送信
-          chrome.tabs.sendMessage(newTab.id, {
+          chrome.tabs.sendMessage(
+            newTab.id,
+            {
+              action: 'emulateGmail',
+              width: selectedWidth
+            },
+            (response) => {
+              console.log('コンテンツスクリプトからのレスポンス:', response); // レスポンスを受け取った時のログ
+            }
+          );
+          console.log('メッセージを送信しました:', newTab.id, {
+            // 送信時のログ
             action: 'emulateGmail',
             width: selectedWidth
-          });
+          }); // デバッグログ出力
         } else {
           // エラー処理 (例: コンソールにエラーメッセージを出力)
           console.error('新しいタブのIDが取得できませんでした。');
