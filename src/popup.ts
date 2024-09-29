@@ -52,7 +52,6 @@ emulateButton.addEventListener('click', () => {
             }
           );
           console.log('メッセージを送信しました:', newTab.id, {
-            // 送信時のログ
             action: 'emulateGmail',
             width: selectedWidth
           }); // デバッグログ出力
