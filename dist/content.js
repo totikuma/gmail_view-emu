@@ -1,10 +1,13 @@
 "use strict";
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.action === 'emulateGmail') {
-        console.log('Gmailレンダリングのエミュレートが開始されました。'); // デバッグログ出力
-        const width = request.width;
-        emulateGmailRendering(width);
-    }
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('コンテンツスクリプトが読み込まれました。');
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request.action === 'emulateGmail') {
+            console.log('Gmailレンダリングのエミュレートが開始されました。'); // デバッグログ出力
+            const width = request.width;
+            emulateGmailRendering(width);
+        }
+    });
 });
 function emulateGmailRendering(width) {
     // HTMLを取得
