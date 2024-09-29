@@ -1,10 +1,31 @@
+// content.ts
+let gmailEmulationWidth: string | null = null; // widthを受け取る変数を用意
+
 document.addEventListener('DOMContentLoaded', () => {
   console.log('コンテンツスクリプトが読み込まれました。');
+
+  // メッセージ受信時の処理
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    console.log('メッセージを受信しました:', request);
+
     if (request.action === 'emulateGmail') {
-      console.log('Gmailレンダリングのエミュレートが開始されました。'); // デバッグログ出力
-      const width = request.width;
-      emulateGmailRendering(width);
+      console.log('Gmailレンダリングのエミュレートが開始されました。');
+      gmailEmulationWidth = request.width; // widthを変数に保存
+
+      if (document.readyState === 'complete') {
+        // DOM構築が完了している場合、すぐに実行
+        if (gmailEmulationWidth !== null) {
+          emulateGmailRendering(gmailEmulationWidth);
+        }
+      } else {
+        // まだの場合、windowのloadイベントを待つ
+        window.addEventListener('load', () => {
+          if (gmailEmulationWidth !== null) {
+            emulateGmailRendering(gmailEmulationWidth);
+          }
+        });
+      }
+      sendResponse({ message: 'エミュレート要求を受信しました。' });
     }
   });
 });
