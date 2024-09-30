@@ -1,8 +1,9 @@
-// content.ts
 let gmailEmulationWidth: string | null = null; // widthを受け取る変数を用意
+let originalHTML = ''; // エミュレート前のHTMLを保存する変数
 
 document.addEventListener('DOMContentLoaded', () => {
   console.log('コンテンツスクリプトが読み込まれました。');
+  originalHTML = document.documentElement.outerHTML; // 初期HTMLを保存
 
   // メッセージ受信時の処理
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -26,6 +27,10 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       }
       sendResponse({ message: 'エミュレート要求を受信しました。' });
+    } else if (request.action === 'undoGmailEmulation') {
+      console.log('Gmailレンダリングのエミュレートをアンドゥします。');
+      undoGmailEmulation();
+      sendResponse({ message: 'アンドゥが完了しました。' });
     }
   });
 });
@@ -80,4 +85,8 @@ function adjustWidth(html: string, width: string): string {
   soup.body.style.maxWidth = `${width}px`;
   soup.body.style.margin = '0 auto';
   return soup.documentElement.outerHTML;
+}
+
+function undoGmailEmulation() {
+  document.documentElement.outerHTML = originalHTML; // HTMLを元に戻す
 }

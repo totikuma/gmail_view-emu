@@ -20,39 +20,63 @@ widthOptions.forEach((option) => {
 const emulateButton = document.createElement('button');
 emulateButton.id = 'emulate';
 emulateButton.textContent = 'エミュレート';
-// イベントリスナーの設定
+// アンドゥボタンの作成
+const undoButton = document.createElement('button');
+undoButton.id = 'undo';
+undoButton.textContent = 'アンドゥ';
+undoButton.style.display = 'none'; // 初期状態は非表示
+// イベントリスナーの設定 (エミュレートボタン)
 emulateButton.addEventListener('click', () => {
-    console.log('エミュレートボタンがクリックされました。'); // デバッグログ出力
+    console.log('エミュレートボタンがクリックされました。');
     const selectedWidth = widthSelect.value;
     // 現在のタブを取得
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         const currentTab = tabs[0];
-        // 新しいタブを作成
-        chrome.tabs.create({
-            url: currentTab.url,
-            active: true
-        }, (newTab) => {
-            // newTab.idがundefinedでないことを確認
-            if (newTab.id !== undefined) {
-                // コンテンツスクリプトにメッセージを送信
-                chrome.tabs.sendMessage(newTab.id, {
-                    action: 'emulateGmail',
-                    width: selectedWidth
-                }, (response) => {
-                    console.log('コンテンツスクリプトからのレスポンス:', response); // レスポンスを受け取った時のログ
-                });
-                console.log('メッセージを送信しました:', newTab.id, {
-                    action: 'emulateGmail',
-                    width: selectedWidth
-                }); // デバッグログ出力
-            }
-            else {
-                // エラー処理 (例: コンソールにエラーメッセージを出力)
-                console.error('新しいタブのIDが取得できませんでした。');
-            }
-        });
+        // コンテンツスクリプトにメッセージを送信
+        if (currentTab.id !== undefined) {
+            chrome.tabs.sendMessage(currentTab.id, {
+                action: 'emulateGmail',
+                width: selectedWidth
+            }, (response) => {
+                console.log('コンテンツスクリプトからのレスポンス (エミュレート):', response);
+            });
+            console.log('エミュレートメッセージを送信しました:', currentTab.id, {
+                action: 'emulateGmail',
+                width: selectedWidth
+            });
+        }
+        else {
+            console.error('現在のタブのIDが取得できませんでした。');
+        }
     });
+    // ボタンの表示を切り替え
+    emulateButton.style.display = 'none';
+    undoButton.style.display = 'block';
+});
+// イベントリスナーの設定 (アンドゥボタン)
+undoButton.addEventListener('click', () => {
+    console.log('アンドゥボタンがクリックされました。');
+    // 現在のタブを取得
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const currentTab = tabs[0];
+        // コンテンツスクリプトにメッセージを送信
+        if (currentTab.id !== undefined) {
+            chrome.tabs.sendMessage(currentTab.id, {
+                action: 'undoGmailEmulation'
+            }, (response) => {
+                console.log('コンテンツスクリプトからのレスポンス (アンドゥ):', response);
+            });
+            console.log('アンドゥメッセージを送信しました:', currentTab.id);
+        }
+        else {
+            console.error('現在のタブのIDが取得できませんでした。');
+        }
+    });
+    // ボタンの表示を切り替え
+    undoButton.style.display = 'none';
+    emulateButton.style.display = 'block';
 });
 // 要素をポップアップページに追加
 document.body.appendChild(widthSelect);
 document.body.appendChild(emulateButton);
+document.body.appendChild(undoButton);
