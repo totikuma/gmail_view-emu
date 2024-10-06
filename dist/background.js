@@ -3,7 +3,10 @@
 console.log('バックグラウンドスクリプトが読み込まれました。');
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     console.log('tabs.onUpdated イベントが発生しました。', tabId, changeInfo, tab);
-    if (changeInfo.status === 'complete' && tab.url) {
+    // chrome:// URL を除外
+    if (changeInfo.status === 'complete' &&
+        tab.url &&
+        !tab.url.startsWith('chrome://')) {
         console.log('タブの読み込みが完了しました。', tab.url);
         // タブオブジェクトを取得
         chrome.tabs.get(tabId, (tab) => {
@@ -25,6 +28,6 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
         });
     }
     else {
-        console.log('タブの読み込みが完了していません。');
+        console.log('タブの読み込みが完了していません。または chrome:// URL です。');
     }
 });
