@@ -4,34 +4,6 @@ let originalHTML = ''; // エミュレート前のHTMLを保存する変数
 document.addEventListener('DOMContentLoaded', () => {
     console.log('コンテンツスクリプトが読み込まれました。');
     originalHTML = document.documentElement.outerHTML; // 初期HTMLを保存
-    // メッセージ受信時の処理
-    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-        console.log('メッセージを受信しました:', request);
-        if (request.action === 'emulateGmail') {
-            console.log('Gmailレンダリングのエミュレートが開始されました。');
-            gmailEmulationWidth = request.width; // widthを変数に保存
-            if (document.readyState === 'complete') {
-                // DOM構築が完了している場合、すぐに実行
-                if (gmailEmulationWidth !== null) {
-                    emulateGmailRendering(gmailEmulationWidth);
-                }
-            }
-            else {
-                // まだの場合、windowのloadイベントを待つ
-                window.addEventListener('load', () => {
-                    if (gmailEmulationWidth !== null) {
-                        emulateGmailRendering(gmailEmulationWidth);
-                    }
-                });
-            }
-            sendResponse({ message: 'エミュレート要求を受信しました。' });
-        }
-        else if (request.action === 'undoGmailEmulation') {
-            console.log('Gmailレンダリングのエミュレートをアンドゥします。');
-            undoGmailEmulation();
-            sendResponse({ message: 'アンドゥが完了しました。' });
-        }
-    });
 });
 function emulateGmailRendering(width) {
     // HTMLを取得

@@ -3,7 +3,8 @@
   "name": "Gmailレンダリングエミュレータ",
   "version": "1.0",
   "description": "Gmailでの表示をエミュレートする",
-  "permissions": ["activeTab", "storage", "tabs"],
+  "permissions": ["activeTab", "storage", "tabs", "scripting"],
+  "host_permissions": ["file:///Users/kuma/Dropbox/*"],
   "action": {
     "default_popup": "popup.html"
   },
