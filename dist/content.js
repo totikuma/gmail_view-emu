@@ -28,57 +28,47 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 }
             });
         }
-        // 必ず sendResponse を呼び出す
-        // console.log('content.ts: エミュレート要求を受信しました。');
-        // sendResponse({ message: 'エミュレート要求を受信しました。' });
     }
     else if (request.action === 'undoGmailEmulation') {
-        console.log('Gmailレンダリングのエミュレートをアンドゥします。');
-        undoGmailEmulation(sendResponse); // sendResponse を引数として渡す
+        console.log('Gmailレンダリングのエミュレートを元に戻します。');
+        undoGmailEmulation(sendResponse); // sendResponse を渡す
     }
-    else {
-        console.log('content.ts: 不明なアクションです。', request.action);
-        sendResponse({ message: '不明なアクションです。' });
-    }
-    // 非同期処理を行う場合は、true を返す
-    return true;
 });
 function emulateGmailRendering(width, sendResponse) {
-    console.log('emulateGmailRendering が呼び出されました。 width:', width);
-    // HTMLを取得
-    const parser = new DOMParser();
-    const soup = parser.parseFromString(document.documentElement.outerHTML, 'text/html');
-    // CSSのサポート制限 (例: position: fixedの削除)
-    soup.querySelectorAll('*[style]').forEach((element) => {
-        const style = element.getAttribute('style') || '';
-        element.setAttribute('style', style.replace(/position:\s*fixed;/g, ''));
-    });
+    console.log('emulateGmailRendering が呼び出されました。width:', width);
+    // HTMLの取得
+    const html = document.body.outerHTML;
+    // CSSのサポート制限
+    const supportedCSS = removeUnsupportedCSS(html);
     // <style>タグ内のCSSのインライン化
-    const styles = soup.querySelectorAll('style');
-    styles.forEach((style) => {
-        const cssText = style.textContent;
-        soup.querySelectorAll('*[style]').forEach((element) => {
-            const inlineStyle = element.getAttribute('style') || '';
-            element.setAttribute('style', `${inlineStyle} ${cssText}`);
-        });
-        style.remove();
-    });
+    const inlinedCSS = inlineStyles(supportedCSS);
     // JavaScriptの無効化
-    soup.querySelectorAll('script').forEach((script) => {
-        script.remove();
-    });
+    const disabledJS = disableJavaScript(inlinedCSS);
     // 自動幅調整
-    soup.body.style.maxWidth = `${width}px`;
-    soup.body.style.margin = '0 auto';
+    const adjustedWidth = adjustWidth(disabledJS, width);
     // 画像の遅延読み込み
-    soup.querySelectorAll('img').forEach((img) => {
-        img.setAttribute('loading', 'lazy');
-    });
+    const lazyLoadedImages = lazyLoadImages(adjustedWidth);
     // エミュレート結果でHTMLを上書き
-    document.body.innerHTML = soup.documentElement.outerHTML;
+    document.body.innerHTML = lazyLoadedImages;
     console.log('emulateGmailRendering が完了しました。');
     // DOM操作が完了した後に sendResponse を呼び出す
     sendResponse({ message: 'エミュレート要求を受信しました。' });
+    console.log('エミュレート結果:', document.body.outerHTML); // デバッグログを追加
+}
+function removeUnsupportedCSS(html) {
+    console.log('removeUnsupportedCSS が呼び出されました。');
+    // サポートされていないCSSを削除する処理を実装
+    return html;
+}
+function disableJavaScript(html) {
+    console.log('disableJavaScript が呼び出されました。');
+    // JavaScriptを無効化する処理を実装
+    return html;
+}
+function lazyLoadImages(html) {
+    console.log('lazyLoadImages が呼び出されました。');
+    // 画像の遅延読み込みを実装
+    return html;
 }
 function inlineStyles(html) {
     console.log('inlineStyles が呼び出されました。');
@@ -98,8 +88,12 @@ function inlineStyles(html) {
 function adjustWidth(html, width) {
     console.log('adjustWidth が呼び出されました。 width:', width);
     const soup = new DOMParser().parseFromString(html, 'text/html');
-    soup.body.style.maxWidth = `${width}px`;
-    soup.body.style.margin = '0 auto';
+    const body = soup.querySelector('body');
+    if (body) {
+        body.style.width = `${width}px`;
+        body.style.maxWidth = `${width}px`; // max-widthプロパティを追加
+        body.style.margin = '0 auto';
+    }
     console.log('adjustWidth が完了しました。');
     return soup.documentElement.outerHTML;
 }
