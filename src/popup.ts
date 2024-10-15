@@ -39,50 +39,9 @@ emulateButton.addEventListener('click', () => {
 
     // currentTab が undefined かどうかを確認
     if (currentTab && currentTab.id) {
-      // タブの読み込みが完了してからメッセージを送信
-      chrome.scripting.executeScript({
-        target: { tabId: currentTab.id },
-        func: () => {
-          // function を func に変更
-          // content.ts 内で実行されるコード
-          // ここでメッセージを受け取るように変更
-          chrome.runtime.onMessage.addListener(
-            (request, sender, sendResponse) => {
-              if (request.action === 'emulateGmail') {
-                console.log(
-                  'Gmailレンダリングのエミュレートが開始されました。'
-                );
-                const gmailEmulationWidth = request.width; // widthを変数に保存
-
-                if (document.readyState === 'complete') {
-                  // DOM構築が完了している場合、すぐに実行
-                  if (gmailEmulationWidth !== null) {
-                    emulateGmailRendering(gmailEmulationWidth);
-                  }
-                } else {
-                  // まだの場合、windowのloadイベントを待つ
-                  window.addEventListener('load', () => {
-                    if (gmailEmulationWidth !== null) {
-                      emulateGmailRendering(gmailEmulationWidth);
-                    }
-                  });
-                }
-                sendResponse({ message: 'エミュレート要求を受信しました。' });
-              } else if (request.action === 'undoGmailEmulation') {
-                console.log(
-                  'Gmailレンダリングのエミュレートをアンドゥします。'
-                );
-                undoGmailEmulation();
-                sendResponse({ message: 'アンドゥが完了しました。' });
-              }
-            }
-          );
-        }
-      });
-
       // content.ts へのメッセージ送信
       chrome.tabs.sendMessage(
-        currentTab.id, // currentTab.id はここで安全に使用できる
+        currentTab.id,
         {
           action: 'emulateGmail',
           width: selectedWidth
@@ -92,6 +51,12 @@ emulateButton.addEventListener('click', () => {
             'コンテンツスクリプトからのレスポンス (エミュレート):',
             response
           );
+
+          // ボタンの表示を切り替え
+          if (response && response.message === 'エミュレート要求を受信しました。') {
+            emulateButton.style.display = 'none';
+            undoButton.style.display = 'block';
+          }
         }
       );
       console.log('エミュレートメッセージを送信しました:', currentTab.id, {
@@ -102,10 +67,6 @@ emulateButton.addEventListener('click', () => {
       console.error('アクティブなタブが見つかりませんでした。');
     }
   });
-
-  // ボタンの表示を切り替え
-  emulateButton.style.display = 'none';
-  undoButton.style.display = 'block';
 });
 
 // イベントリスナーの設定 (アンドゥボタン)
@@ -128,6 +89,12 @@ undoButton.addEventListener('click', () => {
             'コンテンツスクリプトからのレスポンス (アンドゥ):',
             response
           );
+
+          // ボタンの表示を切り替え
+          // if (response && response.message === 'アンドゥが完了しました。') {
+          //   undoButton.style.display = 'none';
+          //   emulateButton.style.display = 'block';
+          // }
         }
       );
       console.log('アンドゥメッセージを送信しました:', currentTab.id);
@@ -135,10 +102,15 @@ undoButton.addEventListener('click', () => {
       console.error('アクティブなタブが見つかりませんでした。');
     }
   });
+});
 
-  // ボタンの表示を切り替え
-  undoButton.style.display = 'none';
-  emulateButton.style.display = 'block';
+// content.ts からのメッセージを受信
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'undoGmailEmulationCompleted') {
+    // ボタンの表示を切り替え
+    undoButton.style.display = 'none';
+    emulateButton.style.display = 'block';
+  }
 });
 
 // 要素をポップアップページに追加

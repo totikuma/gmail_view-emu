@@ -1,9 +1,10 @@
 "use strict";
 let gmailEmulationWidth = null; // widthを受け取る変数を用意
 let originalHTML = ''; // エミュレート前のHTMLを保存する変数
-document.addEventListener('DOMContentLoaded', () => {
+// DOMContentLoaded イベントの代わりに window.onload イベントを使用
+window.addEventListener('load', () => {
     console.log('コンテンツスクリプトが読み込まれました。');
-    originalHTML = document.documentElement.outerHTML; // 初期HTMLを保存
+    originalHTML = document.body.outerHTML; // 初期HTMLを保存 (document.body に変更)
 });
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     console.log('content.ts: メッセージを受信しました:', request, sender);
@@ -14,7 +15,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             // DOM構築が完了している場合、すぐに実行
             console.log('DOM構築が完了しています。エミュレートを実行します。');
             if (gmailEmulationWidth !== null) {
-                emulateGmailRendering(gmailEmulationWidth);
+                emulateGmailRendering(gmailEmulationWidth, sendResponse); // sendResponse を渡す
             }
         }
         else {
@@ -23,43 +24,61 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             window.addEventListener('load', () => {
                 console.log('loadイベントが発生しました。エミュレートを実行します。');
                 if (gmailEmulationWidth !== null) {
-                    emulateGmailRendering(gmailEmulationWidth);
+                    emulateGmailRendering(gmailEmulationWidth, sendResponse); // sendResponse を渡す
                 }
             });
         }
         // 必ず sendResponse を呼び出す
-        console.log('content.ts: エミュレート要求を受信しました。');
-        sendResponse({ message: 'エミュレート要求を受信しました。' });
+        // console.log('content.ts: エミュレート要求を受信しました。');
+        // sendResponse({ message: 'エミュレート要求を受信しました。' });
     }
     else if (request.action === 'undoGmailEmulation') {
         console.log('Gmailレンダリングのエミュレートをアンドゥします。');
-        undoGmailEmulation();
-        // 必ず sendResponse を呼び出す
-        console.log('content.ts: アンドゥが完了しました。');
-        sendResponse({ message: 'アンドゥが完了しました。' });
+        undoGmailEmulation(sendResponse); // sendResponse を引数として渡す
     }
     else {
         console.log('content.ts: 不明なアクションです。', request.action);
         sendResponse({ message: '不明なアクションです。' });
     }
+    // 非同期処理を行う場合は、true を返す
+    return true;
 });
-function emulateGmailRendering(width) {
+function emulateGmailRendering(width, sendResponse) {
     console.log('emulateGmailRendering が呼び出されました。 width:', width);
     // HTMLを取得
-    const html = document.documentElement.outerHTML;
+    const parser = new DOMParser();
+    const soup = parser.parseFromString(document.documentElement.outerHTML, 'text/html');
     // CSSのサポート制限 (例: position: fixedの削除)
-    const cssSupportedHtml = html.replace(/position:\s*fixed;/g, '');
+    soup.querySelectorAll('*[style]').forEach((element) => {
+        const style = element.getAttribute('style') || '';
+        element.setAttribute('style', style.replace(/position:\s*fixed;/g, ''));
+    });
     // <style>タグ内のCSSのインライン化
-    const inlineCssHtml = inlineStyles(cssSupportedHtml);
+    const styles = soup.querySelectorAll('style');
+    styles.forEach((style) => {
+        const cssText = style.textContent;
+        soup.querySelectorAll('*[style]').forEach((element) => {
+            const inlineStyle = element.getAttribute('style') || '';
+            element.setAttribute('style', `${inlineStyle} ${cssText}`);
+        });
+        style.remove();
+    });
     // JavaScriptの無効化
-    const noScriptHtml = inlineCssHtml.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+    soup.querySelectorAll('script').forEach((script) => {
+        script.remove();
+    });
     // 自動幅調整
-    const adjustedWidthHtml = adjustWidth(noScriptHtml, width);
+    soup.body.style.maxWidth = `${width}px`;
+    soup.body.style.margin = '0 auto';
     // 画像の遅延読み込み
-    const lazyLoadImagesHtml = adjustedWidthHtml.replace(/<img\b([^>]*)/gi, '<img loading="lazy" $1');
+    soup.querySelectorAll('img').forEach((img) => {
+        img.setAttribute('loading', 'lazy');
+    });
     // エミュレート結果でHTMLを上書き
-    document.body.innerHTML = lazyLoadImagesHtml;
+    document.body.innerHTML = soup.documentElement.outerHTML;
     console.log('emulateGmailRendering が完了しました。');
+    // DOM操作が完了した後に sendResponse を呼び出す
+    sendResponse({ message: 'エミュレート要求を受信しました。' });
 }
 function inlineStyles(html) {
     console.log('inlineStyles が呼び出されました。');
@@ -84,8 +103,15 @@ function adjustWidth(html, width) {
     console.log('adjustWidth が完了しました。');
     return soup.documentElement.outerHTML;
 }
-function undoGmailEmulation() {
+function undoGmailEmulation(sendResponse) {
     console.log('undoGmailEmulation が呼び出されました。');
-    document.documentElement.outerHTML = originalHTML; // HTMLを元に戻す
-    console.log('undoGmailEmulation が完了しました。');
+    // DOM操作を非同期で実行し、完了後に sendResponse を呼び出す
+    // sendResponse({ message: 'アンドゥが完了しました。' }); // DOM操作の前に sendResponse を呼び出す
+    requestAnimationFrame(() => {
+        document.body.outerHTML = originalHTML; // HTMLを元に戻す (document.body に変更)
+        console.log('undoGmailEmulation が完了しました。');
+        sendResponse({ message: 'アンドゥが完了しました。' });
+        // popup.ts にアンドゥが完了したことを通知
+        chrome.runtime.sendMessage({ action: 'undoGmailEmulationCompleted' });
+    });
 }

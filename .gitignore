@@ -5,3 +5,4 @@ node_modules
 _debug
 _metadata
 *.swp # vim temp files
+host_permissions.json
