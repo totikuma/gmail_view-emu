@@ -41,8 +41,11 @@ function emulateGmailRendering(width, sendResponse) {
     console.log('emulateGmailRendering が呼び出されました。width:', width);
     try {
         // HTMLの取得
-        const html = document.body.outerHTML;
+        let html = document.body.outerHTML;
         console.log('HTMLを取得しました。');
+        // !important プロパティを削除
+        html = html.replace(/!important/g, '');
+        console.log('!important プロパティを削除しました。');
         // CSSのサポート制限
         const supportedCSS = removeUnsupportedCSS(html);
         console.log('CSSのサポート制限を行いました。');
