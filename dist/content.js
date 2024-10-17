@@ -54,14 +54,15 @@ function emulateGmailRendering(width, sendResponse) {
         console.log('JavaScriptの無効化を行いました。');
         // 自動幅調整
         const adjustedWidth = adjustWidth(disabledJS, width);
-        console.log('自動幅調整を行いました。');
+        console.log('自動幅調整を行いました。', adjustedWidth);
         // 画像の遅延読み込み
         const lazyLoadedImages = lazyLoadImages(adjustedWidth);
         console.log('画像の遅延読み込みを行いました。');
         // エミュレート結果でHTMLを上書き
-        document.body.innerHTML = lazyLoadedImages;
+        console.log('置き換え前のHTML:', document.body.outerHTML);
+        document.body.outerHTML = lazyLoadedImages;
         console.log('エミュレート結果でHTMLを上書きしました。');
-        console.log('エミュレート結果:', document.body.outerHTML); // デバッグログを追加
+        console.log('置き換え後のHTML:', document.body.outerHTML);
         // emulateGmailRendering 関数の実行完了後に sendResponse を呼び出す
         sendResponse({ message: 'エミュレート要求を受信しました。' });
     }
