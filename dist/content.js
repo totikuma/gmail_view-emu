@@ -33,27 +33,41 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         console.log('Gmailレンダリングのエミュレートを元に戻します。');
         undoGmailEmulation(sendResponse); // sendResponse を渡す
     }
+    // メッセージの送信が完了した直後に応答を返す
+    // sendResponse({ message: '要求を受信しました。' });
+    return true; // 非同期処理を示すために true を返す
 });
 function emulateGmailRendering(width, sendResponse) {
     console.log('emulateGmailRendering が呼び出されました。width:', width);
-    // HTMLの取得
-    const html = document.body.outerHTML;
-    // CSSのサポート制限
-    const supportedCSS = removeUnsupportedCSS(html);
-    // <style>タグ内のCSSのインライン化
-    const inlinedCSS = inlineStyles(supportedCSS);
-    // JavaScriptの無効化
-    const disabledJS = disableJavaScript(inlinedCSS);
-    // 自動幅調整
-    const adjustedWidth = adjustWidth(disabledJS, width);
-    // 画像の遅延読み込み
-    const lazyLoadedImages = lazyLoadImages(adjustedWidth);
-    // エミュレート結果でHTMLを上書き
-    document.body.innerHTML = lazyLoadedImages;
-    console.log('emulateGmailRendering が完了しました。');
-    // DOM操作が完了した後に sendResponse を呼び出す
-    sendResponse({ message: 'エミュレート要求を受信しました。' });
-    console.log('エミュレート結果:', document.body.outerHTML); // デバッグログを追加
+    try {
+        // HTMLの取得
+        const html = document.body.outerHTML;
+        console.log('HTMLを取得しました。');
+        // CSSのサポート制限
+        const supportedCSS = removeUnsupportedCSS(html);
+        console.log('CSSのサポート制限を行いました。');
+        // <style>タグ内のCSSのインライン化
+        const inlinedCSS = inlineStyles(supportedCSS);
+        console.log('<style>タグ内のCSSのインライン化を行いました。');
+        // JavaScriptの無効化
+        const disabledJS = disableJavaScript(inlinedCSS);
+        console.log('JavaScriptの無効化を行いました。');
+        // 自動幅調整
+        const adjustedWidth = adjustWidth(disabledJS, width);
+        console.log('自動幅調整を行いました。');
+        // 画像の遅延読み込み
+        const lazyLoadedImages = lazyLoadImages(adjustedWidth);
+        console.log('画像の遅延読み込みを行いました。');
+        // エミュレート結果でHTMLを上書き
+        document.body.innerHTML = lazyLoadedImages;
+        console.log('エミュレート結果でHTMLを上書きしました。');
+        console.log('エミュレート結果:', document.body.outerHTML); // デバッグログを追加
+        // emulateGmailRendering 関数の実行完了後に sendResponse を呼び出す
+        sendResponse({ message: 'エミュレート要求を受信しました。' });
+    }
+    catch (error) {
+        console.error('emulateGmailRendering でエラーが発生しました:', error);
+    }
 }
 function removeUnsupportedCSS(html) {
     console.log('removeUnsupportedCSS が呼び出されました。');
@@ -99,13 +113,9 @@ function adjustWidth(html, width) {
 }
 function undoGmailEmulation(sendResponse) {
     console.log('undoGmailEmulation が呼び出されました。');
-    // DOM操作を非同期で実行し、完了後に sendResponse を呼び出す
-    // sendResponse({ message: 'アンドゥが完了しました。' }); // DOM操作の前に sendResponse を呼び出す
-    requestAnimationFrame(() => {
-        document.body.outerHTML = originalHTML; // HTMLを元に戻す (document.body に変更)
-        console.log('undoGmailEmulation が完了しました。');
-        sendResponse({ message: 'アンドゥが完了しました。' });
-        // popup.ts にアンドゥが完了したことを通知
-        chrome.runtime.sendMessage({ action: 'undoGmailEmulationCompleted' });
-    });
+    document.body.outerHTML = originalHTML; // HTMLを元に戻す (document.body に変更)
+    console.log('undoGmailEmulation が完了しました。');
+    sendResponse({ message: 'アンドゥが完了しました。' });
+    // popup.ts にアンドゥが完了したことを通知
+    chrome.runtime.sendMessage({ action: 'undoGmailEmulationCompleted' });
 }
