@@ -76,6 +76,20 @@ function emulateGmailRendering(width, sendResponse) {
 function removeUnsupportedCSS(html) {
     console.log('removeUnsupportedCSS が呼び出されました。');
     // サポートされていないCSSを削除する処理を実装
+    // position プロパティの置換
+    html = html.replace(/position:\s*(absolute|fixed|sticky)/g, 'position: static');
+    // float プロパティの削除
+    html = html.replace(/float:\s*[a-z]+;/g, '');
+    // display プロパティの置換
+    html = html.replace(/display:\s*(flex|grid)/g, 'display: block');
+    // z-index プロパティの削除
+    html = html.replace(/z-index:\s*[0-9]+;/g, '');
+    // overflow プロパティの置換
+    html = html.replace(/overflow:\s*(hidden|scroll)/g, 'overflow: visible');
+    // background-image プロパティの削除
+    html = html.replace(/background-image:\s*url\([^)]+\);/g, '');
+    // font-family プロパティの置換
+    html = html.replace(/font-family:\s*[^;]+;/g, 'font-family: Arial, Helvetica, sans-serif;');
     return html;
 }
 function disableJavaScript(html) {
