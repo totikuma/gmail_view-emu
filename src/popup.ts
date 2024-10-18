@@ -1,9 +1,8 @@
 // 表示幅の選択肢
 const widthOptions = [
-  { value: '320', label: '320px (iPhone SE)' },
-  { value: '375', label: '375px (iPhone X)' },
-  { value: '414', label: '414px (iPhone 14 Pro)' },
-  { value: '360', label: '360px (Galaxy S23)' },
+  { value: '375', label: '375px (iPhone SE)' },
+  { value: '390', label: '390px (iPhone 14 Pro)' },
+  { value: '384', label: '384px (Galaxy S23)' },
   { value: '412', label: '412px (Pixel 7)' }
 ];
 
