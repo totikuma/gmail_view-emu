@@ -1,10 +1,12 @@
-let gmailEmulationWidth: string | null = null; // widthを受け取る変数を用意
-let originalHTML = ''; // エミュレート前のHTMLを保存する変数
+let gmailEmulationWidth: string | null = null;
+let originalHTML: string | null = null;
+let isDarkMode = false; // ダークモード状態を追跡
 
 // DOMContentLoaded イベントの代わりに window.onload イベントを使用
 window.addEventListener('load', () => {
   console.log('コンテンツスクリプトが読み込まれました。');
-  originalHTML = document.body.outerHTML; // 初期HTMLを保存 (document.body に変更)
+  // 初期HTMLを保存
+  originalHTML = document.documentElement.outerHTML;
 });
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -41,54 +43,58 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 function emulateGmailRendering(
-  width: string, 
-  request: { darkMode?: boolean }, 
+  width: string,
+  request: { darkMode?: boolean },
   sendResponse: (response?: any) => void
 ) {
   console.log('emulateGmailRendering が呼び出されました。width:', width);
 
   try {
-    // HTMLの取得
-    let html = document.documentElement.outerHTML;
+    // 現在の状態を確認
+    const currentDarkMode = isDarkMode;
+    
+    // HTMLの取得（初回の場合はoriginalHTMLを使用）
+    let html = originalHTML || document.documentElement.outerHTML;
     console.log('HTMLを取得しました。');
 
-    // !important プロパティを削除
+    // 処理の実行
     html = html.replace(/!important/g, '');
-    console.log('!important プロパティを削除しました。');
-
-    // CSSのサポート制限
     html = removeUnsupportedCSS(html);
-    console.log('CSSのサポート制限を行いました。');
-
-    // 自動幅調整（先に実行）
     html = adjustWidth(html, width);
-    console.log('自動幅調整を行いました。', width);
 
-    // ダークモードの適用（必要な場合）
-    if (request.darkMode) {
-      html = applyDarkMode(html);
-      console.log('ダークモードを適用しました。');
+    // ダークモードの適用（状態が変更される場合のみ）
+    if (request.darkMode !== currentDarkMode) {
+      if (request.darkMode) {
+        html = applyDarkMode(html);
+        console.log('ダークモードを適用しました。');
+      } else {
+        // ダークモードを解除する場合は元のHTMLから再処理
+        html = originalHTML || html;
+        isDarkMode = false;
+        console.log('ダークモードを解除しました。');
+      }
     }
 
-    // スタイルのインライン化（最後に実行）
     html = inlineStyles(html);
-    console.log('スタイルのインライン化を行いました。');
-
-    // JavaScriptの無効化
     html = disableJavaScript(html);
-    console.log('JavaScriptの無効化を行いました。');
-
-    // 画像の遅延読み込み
     html = lazyLoadImages(html);
-    console.log('画像の遅延読み込みを行いました。');
 
-    // エミュレート結果でHTMLを上書き
+    // 結果を適用
     document.documentElement.innerHTML = html;
     console.log('エミュレート結果でHTMLを上書きしました。');
 
-    sendResponse({ message: 'エミュレート要求を受信しました。' });
+    sendResponse({ 
+      message: 'エミュレート要求を受信しました。',
+      darkMode: isDarkMode 
+    });
   } catch (error) {
     console.error('emulateGmailRendering でエラーが発生しました:', error);
+    // エラーオブジェクトの型を適切に処理
+    if (error instanceof Error) {
+      sendResponse({ error: error.message });
+    } else {
+      sendResponse({ error: 'Unknown error occurred' });
+    }
   }
 }
 
@@ -192,22 +198,46 @@ function adjustWidth(html: string, width: string): string {
   return soup.documentElement.outerHTML;
 }
 
-function undoGmailEmulation(sendResponse: (response?: any) => void) { // sendResponse を引数に追加
+function undoGmailEmulation(sendResponse: (response?: any) => void) {
   console.log('undoGmailEmulation が呼び出されました。');
-
-  document.body.outerHTML = originalHTML; // HTMLを元に戻す (document.body に変更)
-  console.log('undoGmailEmulation が完了しました。');
-  sendResponse({ message: 'アンドゥが完了しました。' });
-
-  // popup.ts にアンドゥが完了したことを通知
-  chrome.runtime.sendMessage({ action: 'undoGmailEmulationCompleted' });
+  
+  if (originalHTML) {
+    // 完全に元の状態に戻す
+    document.documentElement.innerHTML = originalHTML;
+    
+    // 状態をリセット
+    gmailEmulationWidth = null;
+    isDarkMode = false;
+    
+    // ダークモードのスタイル要素を確実に削除
+    const darkModeStyle = document.getElementById('gmail-dark-mode-emulation');
+    if (darkModeStyle) {
+      darkModeStyle.remove();
+    }
+    
+    console.log('undoGmailEmulation が完了しました。');
+    sendResponse({ message: 'アンドゥが完了しました。' });
+    
+    // popup.ts にアンドゥが完了したことを通知
+    chrome.runtime.sendMessage({ 
+      action: 'undoGmailEmulationCompleted',
+      darkMode: false 
+    });
+  } else {
+    console.warn('元のHTMLが保存されていません。');
+    sendResponse({ message: 'アンドゥに失敗しました。' });
+  }
 }
 
-// 新しい関数を追加
 function applyDarkMode(html: string): string {
   console.log('applyDarkMode が呼び出されました。');
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
+  
+  // 既存のダークモードスタイルを削除
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  const existingDarkMode = doc.getElementById('gmail-dark-mode-emulation');
+  if (existingDarkMode) {
+    existingDarkMode.remove();
+  }
 
   // Gmailダークモード用のスタイルを定義
   const darkModeStyles = `
@@ -294,43 +324,14 @@ function applyDarkMode(html: string): string {
     }
   `;
 
-  // 既存のスタイルを上書きするためのstyleタグを追加
+  // スタイルを適用
   const style = doc.createElement('style');
   style.id = 'gmail-dark-mode-emulation';
   style.textContent = darkModeStyles;
   doc.head.appendChild(style);
 
-  // 背景画像を持つ要素の処理
-  doc.querySelectorAll<HTMLElement>('*').forEach(element => {
-    // Window.getComputedStyleは直接DOMParser生成のドキュメントでは使えないため、
-    // スタイル属性から直接取得するように修正
-    const style = element.style;
-    const computedBgImage = element.getAttribute('style')?.match(/background-image:\s*([^;]+)/)?.[1] || '';
-    
-    // 背景画像を持つ要素の処理
-    if (computedBgImage && computedBgImage !== 'none') {
-      element.style.backgroundColor = '#2d2d2d';
-      // 背景画像の明るさを調整
-      element.style.filter = 'brightness(0.8)';
-    }
-
-    // 明示的に設定された背景色の処理
-    const bgColor = style.backgroundColor;
-    if (bgColor && 
-        bgColor !== 'rgba(0, 0, 0, 0)' && 
-        bgColor !== 'transparent') {
-      // 明るい背景色を暗い色に変換
-      const rgb = bgColor.match(/\d+/g);
-      if (rgb) {
-        const brightness = (parseInt(rgb[0]) * 299 + 
-                          parseInt(rgb[1]) * 587 + 
-                          parseInt(rgb[2]) * 114) / 1000;
-        if (brightness > 128) {
-          element.style.backgroundColor = '#2d2d2d !important';
-        }
-      }
-    }
-  });
+  // 状態を更新
+  isDarkMode = true;
 
   return doc.documentElement.outerHTML;
 }
