@@ -1,18 +1,37 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
   <head>
     <title>Gmailレンダリングエミュレータ</title>
     <meta charset="utf-8" />
     <style>
+      body {
+        padding: 10px;
+        min-width: 200px;
+      }
+      
+      select, button {
+        margin: 5px;
+        padding: 8px;
+        width: 100%;
+        box-sizing: border-box;
+      }
+
+      button {
+        cursor: pointer;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background: #fff;
+      }
+
       #dark-mode.active {
         background-color: #2d2d2d;
         color: #e3e3e3;
-        border: 1px solid #8ab4f8;
+        border-color: #8ab4f8;
       }
-      button {
-        margin: 5px;
-        padding: 8px 15px;
-        cursor: pointer;
+
+      #undo {
+        border-color: #ff4444;
+        color: #ff4444;
       }
     </style>
   </head>

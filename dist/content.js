@@ -1,83 +1,64 @@
 "use strict";
 let gmailEmulationWidth = null;
 let originalHTML = null;
-let isDarkMode = false; // ダークモード状態を追跡
-// DOMContentLoaded イベントの代わりに window.onload イベントを使用
+let isDarkMode = false;
 window.addEventListener('load', () => {
     console.log('コンテンツスクリプトが読み込まれました。');
-    // 初期HTMLを保存
     originalHTML = document.documentElement.outerHTML;
 });
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    console.log('content.ts: メッセージを受信しました:', request, sender);
+    console.log('content.ts: メッセージを受信しました:', request);
     if (request.action === 'emulateGmail') {
-        console.log('Gmailレンダリングのエミュレートが開始されました。');
-        gmailEmulationWidth = request.width; // widthを変数に保存
+        gmailEmulationWidth = request.width;
+        if (!gmailEmulationWidth) {
+            console.error('幅が指定されていません。');
+            sendResponse({ error: '幅が指定されていません。' });
+            return true;
+        }
         if (document.readyState === 'complete') {
-            // DOM構築が完了している場合、すぐに実行
-            console.log('DOM構築が完了しています。エミュレートを実行します。');
-            if (gmailEmulationWidth !== null) {
-                emulateGmailRendering(gmailEmulationWidth, request, sendResponse); // requestを渡す
-            }
+            emulateGmailRendering(gmailEmulationWidth, request, sendResponse);
         }
         else {
-            // まだの場合、windowのloadイベントを待つ
-            console.log('DOM構築が完了していません。loadイベントを待ちます。');
             window.addEventListener('load', () => {
-                console.log('loadイベントが発生しました。エミュレートを実行します。');
-                if (gmailEmulationWidth !== null) {
-                    emulateGmailRendering(gmailEmulationWidth, request, sendResponse); // requestを渡す
+                if (gmailEmulationWidth) {
+                    emulateGmailRendering(gmailEmulationWidth, request, sendResponse);
+                }
+                else {
+                    console.error('幅が無効になっています。');
+                    sendResponse({ error: '幅が無効になっています。' });
                 }
             });
         }
     }
     else if (request.action === 'undoGmailEmulation') {
-        console.log('Gmailレンダリングのエミュレートを元に戻します。');
-        undoGmailEmulation(sendResponse); // sendResponse を渡す
+        undoGmailEmulation(sendResponse);
     }
-    // メッセージの送信が完了した直後に応答を返す
-    // sendResponse({ message: '要求を受信しました。' });
-    return true; // 非同期処理を示すために true を返す
+    return true;
 });
 function emulateGmailRendering(width, request, sendResponse) {
-    console.log('emulateGmailRendering が呼び出されました。width:', width);
     try {
-        // 現在の状態を確認
         const currentDarkMode = isDarkMode;
-        // HTMLの取得（初回の場合はoriginalHTMLを使用）
         let html = originalHTML || document.documentElement.outerHTML;
-        console.log('HTMLを取得しました。');
-        // 処理の実行
-        html = html.replace(/!important/g, '');
         html = removeUnsupportedCSS(html);
         html = adjustWidth(html, width);
-        // ダークモードの適用（状態が変更される場合のみ）
         if (request.darkMode !== currentDarkMode) {
             if (request.darkMode) {
                 html = applyDarkMode(html);
-                console.log('ダークモードを適用しました。');
             }
             else {
-                // ダークモードを解除する場合は元のHTMLから再処理
                 html = originalHTML || html;
                 isDarkMode = false;
-                console.log('ダークモードを解除しました。');
             }
         }
         html = inlineStyles(html);
-        html = disableJavaScript(html);
-        html = lazyLoadImages(html);
-        // 結果を適用
         document.documentElement.innerHTML = html;
-        console.log('エミュレート結果でHTMLを上書きしました。');
         sendResponse({
             message: 'エミュレート要求を受信しました。',
             darkMode: isDarkMode
         });
     }
     catch (error) {
-        console.error('emulateGmailRendering でエラーが発生しました:', error);
-        // エラーオブジェクトの型を適切に処理
+        console.error('エミュレート処理でエラーが発生:', error);
         if (error instanceof Error) {
             sendResponse({ error: error.message });
         }
@@ -87,115 +68,101 @@ function emulateGmailRendering(width, request, sendResponse) {
     }
 }
 function removeUnsupportedCSS(html) {
-    console.log('removeUnsupportedCSS が呼び出されました。');
-    // サポートされていないCSSを削除する処理を実装
-    // position プロパティの置換
-    html = html.replace(/position:\s*(absolute|fixed|sticky)/g, 'position: static');
-    // float プロパティの削除
-    html = html.replace(/float:\s*[a-z]+;/g, '');
-    // display プロパティの置換
-    html = html.replace(/display:\s*(flex|grid)/g, 'display: block');
-    // z-index プロパティの削除
-    html = html.replace(/z-index:\s*[0-9]+;/g, '');
-    // overflow プロパティの置換
-    html = html.replace(/overflow:\s*(hidden|scroll)/g, 'overflow: visible');
-    // background-image プロパティの削除
-    html = html.replace(/background-image:\s*url\([^)]+\);/g, '');
-    // font-family プロパティの置換
-    html = html.replace(/font-family:\s*[^;]+;/g, 'font-family: Arial, Helvetica, sans-serif;');
-    // 新しい処理を追加
-    html = html.replace(/prefers-color-scheme:\s*light/g, 'prefers-color-scheme: dark');
-    html = html.replace(/color-scheme:\s*[a-z]+/g, 'color-scheme: dark');
-    return html;
-}
-function disableJavaScript(html) {
-    console.log('disableJavaScript が呼び出されました。');
-    // JavaScriptを無効化する処理を実装
-    return html;
-}
-function lazyLoadImages(html) {
-    console.log('lazyLoadImages が呼び出されました。');
-    // 画像の遅延読み込みを実装
-    return html;
+    const cssReplacements = [
+        { from: /position:\s*(absolute|fixed|sticky)/g, to: 'position: static' },
+        { from: /float:\s*[a-z]+;/g, to: '' },
+        { from: /display:\s*(flex|grid)/g, to: 'display: block' },
+        { from: /z-index:\s*[0-9]+;/g, to: '' },
+        { from: /overflow:\s*(hidden|scroll)/g, to: 'overflow: visible' },
+        { from: /background-image:\s*url\([^)]+\);/g, to: '' },
+        { from: /font-family:\s*[^;]+;/g, to: 'font-family: Arial, Helvetica, sans-serif;' },
+        { from: /!important/g, to: '' }
+    ];
+    return cssReplacements.reduce((result, { from, to }) => result.replace(from, to), html);
 }
 function inlineStyles(html) {
-    console.log('inlineStyles が呼び出されました。');
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
-    // style要素を収集
-    const styles = doc.querySelectorAll('style');
-    // 各style要素の内容を処理
-    styles.forEach((style) => {
-        if (style.id === 'gmail-dark-mode-emulation') {
-            // ダークモードのスタイルはスキップ
+    doc.querySelectorAll('style').forEach((style) => {
+        if (style.id === 'gmail-dark-mode-emulation')
             return;
-        }
-        const cssText = style.textContent || '';
-        // CSSルールをパースして個別に適用
-        const rules = cssText.split('}').filter(rule => rule.trim());
+        const rules = (style.textContent || '').split('}')
+            .filter(rule => rule.trim());
         rules.forEach(rule => {
             try {
                 const [selector, styles] = rule.split('{');
                 if (selector && styles) {
-                    const elements = doc.querySelectorAll(selector.trim());
-                    elements.forEach(element => {
+                    const hasColorProperty = styles.includes('color:');
+                    doc.querySelectorAll(selector.trim()).forEach(element => {
+                        // 現在のスタイルを解析
+                        const currentStyles = new Map();
                         const currentStyle = element.getAttribute('style') || '';
-                        element.setAttribute('style', `${currentStyle} ${styles.trim()}`);
+                        currentStyle.split(';').forEach(style => {
+                            const [prop, value] = style.split(':').map(s => s.trim());
+                            if (prop && value) {
+                                currentStyles.set(prop, value);
+                            }
+                        });
+                        // 新しいスタイルを解析して追加/更新
+                        const newStyles = styles.trim().split(';').forEach(style => {
+                            const [prop, value] = style.split(':').map(s => s.trim());
+                            if (prop && value) {
+                                // リンクの色は特別処理
+                                if (prop === 'color' && element instanceof HTMLAnchorElement) {
+                                    if (!currentStyles.has('color')) {
+                                        currentStyles.set(prop, value);
+                                    }
+                                }
+                                else {
+                                    currentStyles.set(prop, value);
+                                }
+                            }
+                        });
+                        // スタイルを文字列に戻す
+                        const combinedStyles = Array.from(currentStyles.entries())
+                            .map(([prop, value]) => `${prop}: ${value}`)
+                            .join('; ');
+                        element.setAttribute('style', combinedStyles);
                     });
                 }
             }
             catch (e) {
-                console.warn('CSSルールの適用に失敗:', rule, e);
+                console.warn('CSSルール適用エラー:', rule);
             }
         });
-        // 処理済みのstyle要素を削除
-        if (style.parentNode) {
-            style.parentNode.removeChild(style);
-        }
+        style.remove();
     });
     return doc.documentElement.outerHTML;
 }
 function adjustWidth(html, width) {
-    console.log('adjustWidth が呼び出されました。 width:', width);
-    const soup = new DOMParser().parseFromString(html, 'text/html');
-    const body = soup.querySelector('body');
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    const body = doc.querySelector('body');
     if (body) {
         body.style.width = `${width}px`;
-        body.style.maxWidth = `${width}px`; // max-widthプロパティを追加
+        body.style.maxWidth = `${width}px`;
         body.style.margin = '0 auto';
     }
-    console.log('adjustWidth が完了しました。');
-    return soup.documentElement.outerHTML;
+    return doc.documentElement.outerHTML;
 }
 function undoGmailEmulation(sendResponse) {
-    console.log('undoGmailEmulation が呼び出されました。');
     if (originalHTML) {
-        // 完全に元の状態に戻す
         document.documentElement.innerHTML = originalHTML;
-        // 状態をリセット
         gmailEmulationWidth = null;
         isDarkMode = false;
-        // ダークモードのスタイル要素を確実に削除
         const darkModeStyle = document.getElementById('gmail-dark-mode-emulation');
-        if (darkModeStyle) {
-            darkModeStyle.remove();
-        }
-        console.log('undoGmailEmulation が完了しました。');
+        darkModeStyle?.remove();
         sendResponse({ message: 'アンドゥが完了しました。' });
-        // popup.ts にアンドゥが完了したことを通知
         chrome.runtime.sendMessage({
             action: 'undoGmailEmulationCompleted',
             darkMode: false
         });
     }
     else {
-        console.warn('元のHTMLが保存されていません。');
         sendResponse({ message: 'アンドゥに失敗しました。' });
     }
 }
 function applyDarkMode(html) {
     console.log('applyDarkMode が呼び出されました。');
-    // 既存のダークモードスタイルを削除
     const doc = new DOMParser().parseFromString(html, 'text/html');
     const existingDarkMode = doc.getElementById('gmail-dark-mode-emulation');
     if (existingDarkMode) {
@@ -222,9 +189,14 @@ function applyDarkMode(html) {
       border-color: #404040 !important;
     }
 
-    /* リンク */
-    a, .link {
+    /* リンク - デフォルトカラーのみ上書き */
+    a:not([style*="color"]), .link:not([style*="color"]) {
       color: #8ab4f8 !important;
+    }
+
+    /* カスタムカラーのリンクは明度のみ調整 */
+    a[style*="color"], .link[style*="color"] {
+      filter: brightness(1.2);
     }
 
     /* ボタン */
@@ -290,7 +262,86 @@ function applyDarkMode(html) {
     style.id = 'gmail-dark-mode-emulation';
     style.textContent = darkModeStyles;
     doc.head.appendChild(style);
-    // 状態を更新
+    // リンクの色を処理
+    doc.querySelectorAll('a[style*="color"]').forEach(link => {
+        const computedColor = link.style.color;
+        if (computedColor) {
+            // 明度を計算
+            const rgb = computedColor.match(/\d+/g);
+            if (rgb) {
+                const brightness = (parseInt(rgb[0]) * 299 +
+                    parseInt(rgb[1]) * 587 +
+                    parseInt(rgb[2]) * 114) / 1000;
+                // 暗すぎる色は明るく調整
+                if (brightness < 128) {
+                    const hsl = rgbToHsl(parseInt(rgb[0]), parseInt(rgb[1]), parseInt(rgb[2]));
+                    const adjustedColor = hslToRgb(hsl.h, hsl.s, Math.min(0.8, hsl.l * 1.5));
+                    link.style.color = `rgb(${adjustedColor.r}, ${adjustedColor.g}, ${adjustedColor.b}) !important`;
+                }
+            }
+        }
+    });
     isDarkMode = true;
     return doc.documentElement.outerHTML;
+}
+// RGB to HSL変換ヘルパー関数
+function rgbToHsl(r, g, b) {
+    r /= 255;
+    g /= 255;
+    b /= 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h = 0, s, l = (max + min) / 2;
+    if (max === min) {
+        h = s = 0;
+    }
+    else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+            case r:
+                h = (g - b) / d + (g < b ? 6 : 0);
+                break;
+            case g:
+                h = (b - r) / d + 2;
+                break;
+            case b:
+                h = (r - g) / d + 4;
+                break;
+        }
+        h /= 6;
+    }
+    return { h, s, l };
+}
+// HSL to RGB変換ヘルパー関数
+function hslToRgb(h, s, l) {
+    let r, g, b;
+    if (s === 0) {
+        r = g = b = l;
+    }
+    else {
+        const hue2rgb = (p, q, t) => {
+            if (t < 0)
+                t += 1;
+            if (t > 1)
+                t -= 1;
+            if (t < 1 / 6)
+                return p + (q - p) * 6 * t;
+            if (t < 1 / 2)
+                return q;
+            if (t < 2 / 3)
+                return p + (q - p) * (2 / 3 - t) * 6;
+            return p;
+        };
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1 / 3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1 / 3);
+    }
+    return {
+        r: Math.round(r * 255),
+        g: Math.round(g * 255),
+        b: Math.round(b * 255)
+    };
 }
