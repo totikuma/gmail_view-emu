@@ -27,10 +27,17 @@ undoButton.id = 'undo';
 undoButton.textContent = 'アンドゥ';
 undoButton.style.display = 'none'; // 初期状態は非表示
 
+// ダークモードトグルボタンの追加
+const darkModeToggle = document.createElement('button');
+darkModeToggle.id = 'dark-mode';
+darkModeToggle.textContent = 'ダークモードを適用';
+darkModeToggle.style.margin = '10px 0';
+
 // イベントリスナーの設定 (エミュレートボタン)
 emulateButton.addEventListener('click', () => {
   console.log('エミュレートボタンがクリックされました。');
   const selectedWidth = widthSelect.value;
+  const isDarkMode = darkModeToggle.classList.contains('active');
 
   // 現在のタブを取得
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -43,7 +50,8 @@ emulateButton.addEventListener('click', () => {
         currentTab.id,
         {
           action: 'emulateGmail',
-          width: selectedWidth
+          width: selectedWidth,
+          darkMode: isDarkMode
         },
         (response) => {
           console.log(
@@ -60,7 +68,8 @@ emulateButton.addEventListener('click', () => {
       );
       console.log('エミュレートメッセージを送信しました:', currentTab.id, {
         action: 'emulateGmail',
-        width: selectedWidth
+        width: selectedWidth,
+        darkMode: isDarkMode
       });
     } else {
       console.error('アクティブなタブが見つかりませんでした。');
@@ -112,7 +121,16 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
+// ダークモードトグル用のイベントリスナー
+darkModeToggle.addEventListener('click', () => {
+  darkModeToggle.classList.toggle('active');
+  darkModeToggle.textContent = darkModeToggle.classList.contains('active') 
+    ? 'ダークモードを解除' 
+    : 'ダークモードを適用';
+});
+
 // 要素をポップアップページに追加
 document.body.appendChild(widthSelect);
+document.body.appendChild(darkModeToggle);
 document.body.appendChild(emulateButton);
 document.body.appendChild(undoButton);
