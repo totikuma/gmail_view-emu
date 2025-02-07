@@ -2,69 +2,83 @@
 let gmailEmulationWidth = null;
 let originalHTML = null;
 let contentDarkMode = false;
-// ダークモードのスタイル定義をグローバルスコープに移動
+// ダークモードのスタイル定義をOutlook風に変更
 const darkModeStyles = `
   /* 基本背景色の設定 - より深い階層構造を反映 */
   body {
-    background-color: #202124 !important;
+    background-color: #11100f !important;
   }
 
-  /* コンテンツエリアの背景 */
+  /* 最外層のコンテナ */
   body > table {
-    background-color: #292a2d !important;
+    background-color: #1d1d1f !important;
   }
 
-  /* テーブルセルの背景色処理 */
+  /* メインコンテンツエリア */
+  body > table table {
+    background-color: #2d2d30 !important;
+  }
+
+  /* テーブルセルの背景色処理 - 階層に応じた色分け */
   td:not([style*="background"]):not([bgcolor]) {
     background-color: inherit !important;
   }
 
-  /* テキストカラーの基本設定 */
-  body *:not([style*="color"]):not(a):not(img) {
-    color: #e8eaed !important;
+  /* テーブルの階層による色分け */
+  table table table {
+    background-color: #333336 !important;
   }
 
-  /* リンクの処理 - Gmail風の青色 */
+  /* テキストカラーの基本設定 - コントラスト改善 */
+  body *:not([style*="color"]):not(a):not(img) {
+    color: #f1f1f1 !important;
+  }
+
+  /* 二次的なテキスト */
+  .secondary-text, 
+  small, 
+  .small {
+    color: #c7c7c7 !important;
+  }
+
+  /* リンクの処理 - Outlook風の控えめな強調 */
   a:not([style*="color"]) {
-    color: #8ab4f8 !important;
+    color: #c8c8c8 !important;
+    text-decoration: none !important;
   }
   a:not([style*="color"]):hover {
-    color: #aecbfa !important;
+    color: #ffffff !important;
+    text-decoration: underline !important;
   }
 
-  /* 明るい背景を持つ要素の特別処理 */
-  [style*="background-color: #fff"],
-  [style*="background-color: rgb(255"],
-  [style*="background: #fff"],
-  [style*="background: rgb(255"] {
-    background-color: #35363a !important;
-    color: #e8eaed !important;
+  /* ボタン要素の特別処理 */
+  [style*="background-color"][style*="#"]:not([style*="rgb"]),
+  [style*="background-color: rgb("] {
+    background-color: #3c3c3c !important;
+    border: 1px solid #4a4a4a !important;
   }
 
-  /* ボーダー色の調整 - より自然な暗色 */
-  [style*="border"] {
-    border-color: #3c4043 !important;
+  /* ボタン内のテキスト */
+  [style*="background-color"] a,
+  [bgcolor] a {
+    color: #ffffff !important;
   }
 
-  /* 画像の処理 - より洗練された調整 */
+  /* 画像の処理 - より自然な見え方に */
   img:not([src^="data:"]) {
-    filter: brightness(0.9) contrast(1.1) !important;
+    filter: brightness(0.9) contrast(1.1) saturate(0.95) !important;
+  }
+
+  /* ボーダー色の調整 - より明確な区切り */
+  [style*="border"] {
+    border-color: #404040 !important;
   }
 
   /* フォーム要素の処理 */
   input, textarea, select {
-    background-color: #35363a !important;
-    color: #e8eaed !important;
-    border-color: #3c4043 !important;
-  }
-
-  /* ボタン要素の処理 */
-  button,
-  input[type="button"],
-  input[type="submit"] {
-    background-color: #35363a !important;
-    color: #e8eaed !important;
-    border-color: #5f6368 !important;
+    background-color: #333336 !important;
+    color: #f1f1f1 !important;
+    border: 1px solid #404040 !important;
   }
 `;
 window.addEventListener('load', () => {
@@ -262,25 +276,24 @@ function applyDarkMode(html) {
                 const [r, g, b] = rgb.map(Number);
                 const brightness = (r * 299 + g * 587 + b * 114) / 1000;
                 if (brightness > 128) {
-                    // 明るい背景色の場合、暗めに変換
-                    const darkR = Math.floor(r * 0.15);
-                    const darkG = Math.floor(g * 0.15);
-                    const darkB = Math.floor(b * 0.15);
+                    // 要素の種類に応じて異なる暗さを適用
+                    let darkFactor = 0.18;
+                    if (element.tagName === 'TABLE') {
+                        // テーブルの階層を考慮
+                        const depth = getElementDepth(element);
+                        darkFactor = Math.min(0.18 + (depth * 0.02), 0.25);
+                    }
+                    else if (element.closest('a') || element.tagName === 'BUTTON') {
+                        // ボタンやリンク要素は少し明るめに
+                        darkFactor = 0.22;
+                    }
+                    const darkR = Math.floor(r * darkFactor);
+                    const darkG = Math.floor(g * darkFactor);
+                    const darkB = Math.floor(b * darkFactor);
                     element.style.backgroundColor = `rgb(${darkR}, ${darkG}, ${darkB})`;
                     // テキストの可読性を確保
                     if (!(element instanceof HTMLAnchorElement)) {
-                        element.style.color = '#e8eaed';
-                    }
-                }
-                else {
-                    // すでに暗い背景色の場合は、テキストの可読性のみ確保
-                    const textBrightness = computedStyle.color.match(/\d+/g);
-                    if (textBrightness) {
-                        const [tr, tg, tb] = textBrightness.map(Number);
-                        const textBright = (tr * 299 + tg * 587 + tb * 114) / 1000;
-                        if (textBright < 128) {
-                            element.style.color = '#e8eaed';
-                        }
+                        element.style.color = '#f1f1f1';
                     }
                 }
             }
