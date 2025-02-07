@@ -18,93 +18,90 @@ widthOptions.forEach((option) => {
 // エミュレートボタンの作成
 const emulateButton = document.createElement('button');
 emulateButton.id = 'emulate';
-emulateButton.textContent = 'エミュレート';
+emulateButton.textContent = 'スマホビューを適用';
 // アンドゥボタンの作成
 const undoButton = document.createElement('button');
 undoButton.id = 'undo';
-undoButton.textContent = 'アンドゥ';
-undoButton.style.display = 'none'; // 初期状態は非表示
+undoButton.textContent = 'すべてを元に戻す';
+undoButton.style.display = 'none';
 // ダークモードトグルボタンの追加
 const darkModeToggle = document.createElement('button');
 darkModeToggle.id = 'dark-mode';
 darkModeToggle.textContent = 'ダークモードを適用';
-darkModeToggle.style.margin = '10px 0';
-// イベントリスナーの設定 (エミュレートボタン)
+// 状態管理の変数
+let isSmartphoneView = false;
+let isDarkMode = false;
+// エミュレートボタンのイベントリスナー
 emulateButton.addEventListener('click', () => {
-    console.log('エミュレートボタンがクリックされました。');
-    const selectedWidth = widthSelect.value;
-    const isDarkMode = darkModeToggle.classList.contains('active');
-    // 現在のタブを取得
+    isSmartphoneView = !isSmartphoneView;
+    updateUI();
+    applyCurrentState();
+});
+// ダークモードトグルのイベントリスナー
+darkModeToggle.addEventListener('click', () => {
+    isDarkMode = !isDarkMode;
+    updateUI();
+    applyCurrentState();
+});
+// アンドゥボタンのイベントリスナー
+undoButton.addEventListener('click', () => {
+    isSmartphoneView = false;
+    isDarkMode = false;
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         const currentTab = tabs[0];
-        // currentTab が undefined かどうかを確認
-        if (currentTab && currentTab.id) {
-            // content.ts へのメッセージ送信
+        if (currentTab?.id) {
+            chrome.tabs.sendMessage(currentTab.id, { action: 'undoGmailEmulation' }, (response) => {
+                console.log('アンドゥ完了:', response);
+                updateUI();
+            });
+        }
+    });
+});
+// UIの更新
+function updateUI() {
+    // ボタンのテキストと状態を更新
+    emulateButton.textContent = isSmartphoneView
+        ? 'スマホビューを解除'
+        : 'スマホビューを適用';
+    darkModeToggle.textContent = isDarkMode
+        ? 'ダークモードを解除'
+        : 'ダークモードを適用';
+    darkModeToggle.classList.toggle('active', isDarkMode);
+    emulateButton.classList.toggle('active', isSmartphoneView);
+    // アンドゥボタンの表示制御
+    undoButton.style.display = (isSmartphoneView || isDarkMode) ? 'block' : 'none';
+    // 幅選択の有効/無効切り替え
+    widthSelect.disabled = !isSmartphoneView;
+}
+// 現在の状態をコンテンツスクリプトに適用
+function applyCurrentState() {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        const currentTab = tabs[0];
+        if (currentTab?.id) {
             chrome.tabs.sendMessage(currentTab.id, {
                 action: 'emulateGmail',
-                width: selectedWidth,
+                width: isSmartphoneView ? widthSelect.value : null,
                 darkMode: isDarkMode
             }, (response) => {
-                console.log('コンテンツスクリプトからのレスポンス (エミュレート):', response);
-                // ボタンの表示を切り替え
-                if (response && response.message === 'エミュレート要求を受信しました。') {
-                    emulateButton.style.display = 'none';
-                    undoButton.style.display = 'block';
+                console.log('状態適用完了:', response);
+                // レスポンスに基づいてUIを更新
+                if (response && !response.error) {
+                    updateUI();
                 }
             });
-            console.log('エミュレートメッセージを送信しました:', currentTab.id, {
-                action: 'emulateGmail',
-                width: selectedWidth,
-                darkMode: isDarkMode
-            });
-        }
-        else {
-            console.error('アクティブなタブが見つかりませんでした。');
         }
     });
-});
-// イベントリスナーの設定 (アンドゥボタン)
-undoButton.addEventListener('click', () => {
-    console.log('アンドゥボタンがクリックされました。');
-    // 現在のタブを取得
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-        const currentTab = tabs[0];
-        // コンテンツスクリプトにメッセージを送信
-        if (currentTab && currentTab.id) {
-            chrome.tabs.sendMessage(currentTab.id, {
-                action: 'undoGmailEmulation'
-            }, (response) => {
-                console.log('コンテンツスクリプトからのレスポンス (アンドゥ):', response);
-                // ボタンの表示を切り替え
-                // if (response && response.message === 'アンドゥが完了しました。') {
-                //   undoButton.style.display = 'none';
-                //   emulateButton.style.display = 'block';
-                // }
-            });
-            console.log('アンドゥメッセージを送信しました:', currentTab.id);
-        }
-        else {
-            console.error('アクティブなタブが見つかりませんでした。');
-        }
-    });
-});
+}
 // content.ts からのメッセージを受信
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     if (request.action === 'undoGmailEmulationCompleted') {
-        // ボタンの表示を切り替え
-        undoButton.style.display = 'none';
-        emulateButton.style.display = 'block';
+        isSmartphoneView = false;
+        isDarkMode = false;
+        updateUI();
     }
-});
-// ダークモードトグル用のイベントリスナー
-darkModeToggle.addEventListener('click', () => {
-    darkModeToggle.classList.toggle('active');
-    darkModeToggle.textContent = darkModeToggle.classList.contains('active')
-        ? 'ダークモードを解除'
-        : 'ダークモードを適用';
 });
 // 要素をポップアップページに追加
 document.body.appendChild(widthSelect);
-document.body.appendChild(darkModeToggle);
 document.body.appendChild(emulateButton);
+document.body.appendChild(darkModeToggle);
 document.body.appendChild(undoButton);

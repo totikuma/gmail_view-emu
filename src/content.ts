@@ -1,6 +1,6 @@
 let gmailEmulationWidth: string | null = null;
 let originalHTML: string | null = null;
-let isDarkMode = false;
+let contentDarkMode = false;
 
 // ダークモードのスタイル定義をグローバルスコープに移動
 const darkModeStyles = `
@@ -77,24 +77,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   console.log('content.ts: メッセージを受信しました:', request);
 
   if (request.action === 'emulateGmail') {
-    gmailEmulationWidth = request.width;
-    
-    if (!gmailEmulationWidth) {
-      console.error('幅が指定されていません。');
-      sendResponse({ error: '幅が指定されていません。' });
-      return true;
-    }
-
+    // 幅のチェックを削除し、常に処理を実行
     if (document.readyState === 'complete') {
-      emulateGmailRendering(gmailEmulationWidth, request, sendResponse);
+      emulateGmailRendering(request.width, request, sendResponse);
     } else {
       window.addEventListener('load', () => {
-        if (gmailEmulationWidth) {
-          emulateGmailRendering(gmailEmulationWidth, request, sendResponse);
-        } else {
-          console.error('幅が無効になっています。');
-          sendResponse({ error: '幅が無効になっています。' });
-        }
+        emulateGmailRendering(request.width, request, sendResponse);
       });
     }
   } else if (request.action === 'undoGmailEmulation') {
@@ -105,36 +93,58 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 function emulateGmailRendering(
-  width: string,
+  width: string | null,
   request: { darkMode?: boolean },
   sendResponse: (response?: any) => void
 ) {
   try {
-    const currentDarkMode = isDarkMode;
+    const currentDarkMode = contentDarkMode;
     let html = originalHTML || document.documentElement.outerHTML;
+    let needsUpdate = false;
 
-    html = removeUnsupportedCSS(html);
-    html = adjustWidth(html, width);
+    // スマホビューの状態管理
+    if (width) {
+      // スマホビュー適用
+      html = removeUnsupportedCSS(html);
+      html = adjustWidth(html, width);
+      needsUpdate = true;
+      gmailEmulationWidth = width;  // 幅を保存
+    } else if (gmailEmulationWidth) {
+      // スマホビュー解除
+      html = originalHTML || html;
+      gmailEmulationWidth = null;  // 幅をリセット
+      needsUpdate = true;
+    }
 
+    // ダークモードの状態管理
     if (request.darkMode !== currentDarkMode) {
       if (request.darkMode) {
         html = applyDarkMode(html);
+        needsUpdate = true;
       } else {
-        html = originalHTML || html;
-        isDarkMode = false;
+        contentDarkMode = false;
+        const darkModeStyle = document.getElementById('gmail-dark-mode-emulation');
+        if (darkModeStyle) {
+          darkModeStyle.remove();
+        }
       }
     }
 
-    html = inlineStyles(html);
-    document.documentElement.innerHTML = html;
+    // 変更がある場合のみHTMLを更新
+    if (needsUpdate) {
+      html = inlineStyles(html);
+      document.documentElement.innerHTML = html;
 
-    if (isDarkMode) {
-      attachDarkModeObserver();
+      // ダークモードが有効な場合は再適用
+      if (contentDarkMode) {
+        applyDarkMode(html);
+      }
     }
 
     sendResponse({ 
       message: 'エミュレート要求を受信しました。',
-      darkMode: isDarkMode 
+      darkMode: contentDarkMode,
+      width: gmailEmulationWidth
     });
   } catch (error) {
     console.error('エミュレート処理でエラーが発生:', error);
@@ -238,7 +248,7 @@ function undoGmailEmulation(sendResponse: (response?: any) => void) {
   if (originalHTML) {
     document.documentElement.innerHTML = originalHTML;
     gmailEmulationWidth = null;
-    isDarkMode = false;
+    contentDarkMode = false;
     
     const darkModeStyle = document.getElementById('gmail-dark-mode-emulation');
     darkModeStyle?.remove();
@@ -264,7 +274,7 @@ function applyDarkMode(html: string): string {
 
   const style = doc.createElement('style');
   style.id = 'gmail-dark-mode-emulation';
-  style.textContent = darkModeStyles;  // グローバル変数を使用
+  style.textContent = darkModeStyles;
   doc.head.appendChild(style);
 
   // 背景色を持つ要素の高度な処理
@@ -313,7 +323,7 @@ function applyDarkMode(html: string): string {
     }
   });
 
-  isDarkMode = true;
+  contentDarkMode = true;
   return doc.documentElement.outerHTML;
 }
 
@@ -333,10 +343,10 @@ function getElementDepth(element: Element): number {
 // MutationObserver も同様に更新
 function attachDarkModeObserver(): void {
   const observer = new MutationObserver((mutations) => {
-    if (isDarkMode && !document.getElementById('gmail-dark-mode-emulation')) {
+    if (contentDarkMode && !document.getElementById('gmail-dark-mode-emulation')) {
       const style = document.createElement('style');
       style.id = 'gmail-dark-mode-emulation';
-      style.textContent = darkModeStyles; // 上記と同じスタイル定義を使用
+      style.textContent = darkModeStyles;
       document.head.appendChild(style);
 
       // 動的に追加された要素に対しても背景色の処理を適用
