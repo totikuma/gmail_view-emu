@@ -80,6 +80,15 @@ const darkModeStyles = `
     color: #f1f1f1 !important;
     border: 1px solid #404040 !important;
   }
+
+  /* ボタン要素の処理 */
+  button,
+  input[type="button"],
+  input[type="submit"] {
+    background-color: #3c3c3c !important;
+    color: #f1f1f1 !important;
+    border: 1px solid #4a4a4a !important;
+  }
 `;
 
 window.addEventListener('load', () => {
@@ -306,11 +315,11 @@ function applyDarkMode(html: string): string {
           // 要素の種類に応じて異なる暗さを適用
           let darkFactor = 0.18;
           if (element.tagName === 'TABLE') {
-            // テーブルの階層を考慮
+            // テーブルの場合は階層に応じた暗さを適用
             const depth = getElementDepth(element);
             darkFactor = Math.min(0.18 + (depth * 0.02), 0.25);
-          } else if (element.closest('a') || element.tagName === 'BUTTON') {
-            // ボタンやリンク要素は少し明るめに
+          } else if (element.closest('a') || element.tagName === 'BUTTON' || element.tagName === 'INPUT') {
+            // ボタンやリンク、入力要素は少し明るめに（あまり暗くしない）
             darkFactor = 0.22;
           }
 
@@ -319,7 +328,7 @@ function applyDarkMode(html: string): string {
           const darkB = Math.floor(b * darkFactor);
           element.style.backgroundColor = `rgb(${darkR}, ${darkG}, ${darkB})`;
           
-          // テキストの可読性を確保
+          // テキストの可読性を確保（リンク以外は明るいテキスト色に）
           if (!(element instanceof HTMLAnchorElement)) {
             element.style.color = '#f1f1f1';
           }

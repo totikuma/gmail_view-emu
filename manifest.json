@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Gmailレンダリングエミュレータ",
-  "version": "1.0",
+  "version": "1.1",
   "description": "Gmailでの表示をエミュレートする",
   "permissions": ["activeTab", "storage", "tabs", "scripting"],
   "host_permissions": ["file:///Users/kuma/Dropbox/*","file://Users/tochi/Documents/playground"],
