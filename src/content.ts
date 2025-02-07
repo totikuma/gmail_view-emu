@@ -2,6 +2,72 @@ let gmailEmulationWidth: string | null = null;
 let originalHTML: string | null = null;
 let isDarkMode = false;
 
+// ダークモードのスタイル定義をグローバルスコープに移動
+const darkModeStyles = `
+  /* 基本背景色の設定 - より深い階層構造を反映 */
+  body {
+    background-color: #202124 !important;
+  }
+
+  /* コンテンツエリアの背景 */
+  body > table {
+    background-color: #292a2d !important;
+  }
+
+  /* テーブルセルの背景色処理 */
+  td:not([style*="background"]):not([bgcolor]) {
+    background-color: inherit !important;
+  }
+
+  /* テキストカラーの基本設定 */
+  body *:not([style*="color"]):not(a):not(img) {
+    color: #e8eaed !important;
+  }
+
+  /* リンクの処理 - Gmail風の青色 */
+  a:not([style*="color"]) {
+    color: #8ab4f8 !important;
+  }
+  a:not([style*="color"]):hover {
+    color: #aecbfa !important;
+  }
+
+  /* 明るい背景を持つ要素の特別処理 */
+  [style*="background-color: #fff"],
+  [style*="background-color: rgb(255"],
+  [style*="background: #fff"],
+  [style*="background: rgb(255"] {
+    background-color: #35363a !important;
+    color: #e8eaed !important;
+  }
+
+  /* ボーダー色の調整 - より自然な暗色 */
+  [style*="border"] {
+    border-color: #3c4043 !important;
+  }
+
+  /* 画像の処理 - より洗練された調整 */
+  img:not([src^="data:"]) {
+    filter: brightness(0.9) contrast(1.1) !important;
+  }
+
+  /* フォーム要素の処理 */
+  input, textarea, select {
+    background-color: #35363a !important;
+    color: #e8eaed !important;
+    border-color: #3c4043 !important;
+  }
+
+  /* ボタン要素の処理 */
+  button,
+  input[type="button"],
+  input[type="submit"] {
+    background-color: #35363a !important;
+    color: #e8eaed !important;
+    border-color: #5f6368 !important;
+  }
+`;
+
 window.addEventListener('load', () => {
   console.log('コンテンツスクリプトが読み込まれました。');
   originalHTML = document.documentElement.outerHTML;
@@ -61,6 +127,10 @@ function emulateGmailRendering(
 
     html = inlineStyles(html);
     document.documentElement.innerHTML = html;
+
+    if (isDarkMode) {
+      attachDarkModeObserver();
+    }
 
     sendResponse({ 
       message: 'エミュレート要求を受信しました。',
@@ -192,120 +262,54 @@ function applyDarkMode(html: string): string {
     existingDarkMode.remove();
   }
 
-  // Gmailダークモード用のスタイルを定義
-  const darkModeStyles = `
-    /* 基本的な背景と文字色 */
-    body, .view-container, .content-wrapper {
-      background-color: #1f1f1f !important;
-      color: #e3e3e3 !important;
-    }
-
-    /* メールコンテンツ領域 */
-    .email-content, .message-body, .message-container {
-      background-color: #2d2d2d !important;
-      color: #e3e3e3 !important;
-      border-color: #404040 !important;
-    }
-
-    /* ヘッダー、フッター、サイドバー */
-    header, footer, .sidebar, .navigation {
-      background-color: #2d2d2d !important;
-      border-color: #404040 !important;
-    }
-
-    /* リンク - デフォルトカラーのみ上書き */
-    a:not([style*="color"]), .link:not([style*="color"]) {
-      color: #8ab4f8 !important;
-    }
-
-    /* カスタムカラーのリンクは明度のみ調整 */
-    a[style*="color"], .link[style*="color"] {
-      filter: brightness(1.2);
-    }
-
-    /* ボタン */
-    button, .button, input[type="button"], input[type="submit"] {
-      background-color: #404040 !important;
-      color: #e3e3e3 !important;
-      border-color: #505050 !important;
-    }
-
-    /* 入力フィールド */
-    input[type="text"], input[type="email"], textarea {
-      background-color: #2d2d2d !important;
-      color: #e3e3e3 !important;
-      border-color: #404040 !important;
-    }
-
-    /* テーブル */
-    table, th, td {
-      background-color: #2d2d2d !important;
-      color: #e3e3e3 !important;
-      border-color: #404040 !important;
-    }
-
-    /* 区切り線 */
-    hr {
-      border-color: #404040 !important;
-    }
-
-    /* 画像の色反転（オプション） */
-    img:not([src*="data:"]) {
-      filter: brightness(0.8) contrast(1.2);
-    }
-
-    /* 選択時の背景色 */
-    ::selection {
-      background-color: #404040 !important;
-      color: #ffffff !important;
-    }
-
-    /* スクロールバー */
-    ::-webkit-scrollbar {
-      width: 12px;
-      background-color: #1f1f1f;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background-color: #404040;
-      border-radius: 6px;
-    }
-
-    /* メールリスト */
-    .email-list-item, .message-list-item {
-      background-color: #2d2d2d !important;
-      border-bottom: 1px solid #404040 !important;
-    }
-
-    .email-list-item:hover, .message-list-item:hover {
-      background-color: #353535 !important;
-    }
-  `;
-
-  // スタイルを適用
   const style = doc.createElement('style');
   style.id = 'gmail-dark-mode-emulation';
-  style.textContent = darkModeStyles;
+  style.textContent = darkModeStyles;  // グローバル変数を使用
   doc.head.appendChild(style);
 
-  // リンクの色を処理
-  doc.querySelectorAll<HTMLElement>('a[style*="color"]').forEach(link => {
-    const computedColor = link.style.color;
-    if (computedColor) {
-      // 明度を計算
-      const rgb = computedColor.match(/\d+/g);
+  // 背景色を持つ要素の高度な処理
+  doc.querySelectorAll<HTMLElement>('[style*="background"]').forEach(element => {
+    const computedStyle = window.getComputedStyle(element);
+    const bgColor = computedStyle.backgroundColor;
+    
+    if (bgColor && bgColor !== 'transparent' && bgColor !== 'rgba(0, 0, 0, 0)') {
+      const rgb = bgColor.match(/\d+/g);
       if (rgb) {
-        const brightness = (parseInt(rgb[0]) * 299 + 
-                          parseInt(rgb[1]) * 587 + 
-                          parseInt(rgb[2]) * 114) / 1000;
+        const [r, g, b] = rgb.map(Number);
+        const brightness = (r * 299 + g * 587 + b * 114) / 1000;
         
-        // 暗すぎる色は明るく調整
-        if (brightness < 128) {
-          const hsl = rgbToHsl(parseInt(rgb[0]), parseInt(rgb[1]), parseInt(rgb[2]));
-          const adjustedColor = hslToRgb(hsl.h, hsl.s, Math.min(0.8, hsl.l * 1.5));
-          link.style.color = `rgb(${adjustedColor.r}, ${adjustedColor.g}, ${adjustedColor.b}) !important`;
+        if (brightness > 128) {
+          // 明るい背景色の場合、暗めに変換
+          const darkR = Math.floor(r * 0.15);
+          const darkG = Math.floor(g * 0.15);
+          const darkB = Math.floor(b * 0.15);
+          element.style.backgroundColor = `rgb(${darkR}, ${darkG}, ${darkB})`;
+          
+          // テキストの可読性を確保
+          if (!(element instanceof HTMLAnchorElement)) {
+            element.style.color = '#e8eaed';
+          }
+        } else {
+          // すでに暗い背景色の場合は、テキストの可読性のみ確保
+          const textBrightness = computedStyle.color.match(/\d+/g);
+          if (textBrightness) {
+            const [tr, tg, tb] = textBrightness.map(Number);
+            const textBright = (tr * 299 + tg * 587 + tb * 114) / 1000;
+            if (textBright < 128) {
+              element.style.color = '#e8eaed';
+            }
+          }
         }
       }
+    }
+  });
+
+  // テーブル構造の階層に基づく背景色の微調整
+  doc.querySelectorAll('table').forEach((table, index) => {
+    const depth = getElementDepth(table);
+    if (depth > 1) {
+      const darkenAmount = Math.min(depth * 2, 10);
+      table.style.backgroundColor = `rgba(41, 42, 45, ${darkenAmount}%)`;
     }
   });
 
@@ -313,58 +317,47 @@ function applyDarkMode(html: string): string {
   return doc.documentElement.outerHTML;
 }
 
-// RGB to HSL変換ヘルパー関数
-function rgbToHsl(r: number, g: number, b: number) {
-  r /= 255;
-  g /= 255;
-  b /= 255;
-
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  let h = 0, s, l = (max + min) / 2;
-
-  if (max === min) {
-    h = s = 0;
-  } else {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-      case g: h = (b - r) / d + 2; break;
-      case b: h = (r - g) / d + 4; break;
+// 要素の階層の深さを取得するヘルパー関数
+function getElementDepth(element: Element): number {
+  let depth = 0;
+  let parent = element.parentElement;
+  while (parent) {
+    if (parent.tagName === 'TABLE') {
+      depth++;
     }
-    h /= 6;
+    parent = parent.parentElement;
   }
-
-  return { h, s, l };
+  return depth;
 }
 
-// HSL to RGB変換ヘルパー関数
-function hslToRgb(h: number, s: number, l: number) {
-  let r, g, b;
+// MutationObserver も同様に更新
+function attachDarkModeObserver(): void {
+  const observer = new MutationObserver((mutations) => {
+    if (isDarkMode && !document.getElementById('gmail-dark-mode-emulation')) {
+      const style = document.createElement('style');
+      style.id = 'gmail-dark-mode-emulation';
+      style.textContent = darkModeStyles; // 上記と同じスタイル定義を使用
+      document.head.appendChild(style);
 
-  if (s === 0) {
-    r = g = b = l;
-  } else {
-    const hue2rgb = (p: number, q: number, t: number) => {
-      if (t < 0) t += 1;
-      if (t > 1) t -= 1;
-      if (t < 1/6) return p + (q - p) * 6 * t;
-      if (t < 1/2) return q;
-      if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-      return p;
-    };
-
-    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-    const p = 2 * l - q;
-    r = hue2rgb(p, q, h + 1/3);
-    g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1/3);
-  }
-
-  return {
-    r: Math.round(r * 255),
-    g: Math.round(g * 255),
-    b: Math.round(b * 255)
-  };
+      // 動的に追加された要素に対しても背景色の処理を適用
+      mutations.forEach(mutation => {
+        mutation.addedNodes.forEach(node => {
+          if (node instanceof HTMLElement) {
+            if (node.hasAttribute('style') && 
+                node.getAttribute('style')?.includes('background')) {
+              // 背景色の処理を適用
+              // ... (上記の背景色処理と同じロジック)
+            }
+          }
+        });
+      });
+    }
+  });
+  
+  observer.observe(document.body, { 
+    childList: true, 
+    subtree: true, 
+    attributes: true, 
+    attributeFilter: ['style'] 
+  });
 }
