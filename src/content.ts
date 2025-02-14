@@ -26,112 +26,85 @@ const DARK_MODE_CONFIG: DarkModeConfig = {
   cardDarkFactor: 0.20
 };
 
+// ダークモードの色定義
+const DARK_MODE_COLORS = {
+  background: {
+    primary: '#1a1a1a',
+    secondary: '#2d2d2d',
+    tertiary: '#333333'
+  },
+  text: {
+    primary: '#e8eaed',
+    secondary: '#a0a0a0',
+    accent: '#8ab4f8'
+  }
+} as const;
+
 // ダークモードのスタイル定義をOutlook風に変更
-const createDarkModeStyles = () => `
-  /* 基本背景色の設定 - より深い階層構造を反映 */
-  body {
-    background-color: #11100f !important;
-  }
+function createDarkModeStyles(): string {
+  return `
+    /* CSS変数の定義 */
+    :root {
+      --dm-bg-primary: ${DARK_MODE_COLORS.background.primary};
+      --dm-bg-secondary: ${DARK_MODE_COLORS.background.secondary};
+      --dm-bg-tertiary: ${DARK_MODE_COLORS.background.tertiary};
+      --dm-text-primary: ${DARK_MODE_COLORS.text.primary};
+      --dm-text-secondary: ${DARK_MODE_COLORS.text.secondary};
+      --dm-text-accent: ${DARK_MODE_COLORS.text.accent};
+    }
 
-  /* 最外層のコンテナ */
-  body > table {
-    background-color: #1d1d1f !important;
-  }
+    /* 基本背景色の設定 */
+    body {
+      background-color: var(--dm-bg-primary) !important;
+    }
 
-  /* メインコンテンツエリア */
-  body > table table {
-    background-color: #2d2d30 !important;
-  }
+    /* ヘッダー部分の背景色修正 */
+    body > table:first-of-type,
+    body > table:first-of-type td,
+    [bgcolor="#FFFFFF"],
+    [style*="background-color: #fff"],
+    [style*="background-color: rgb(255"] {
+      background-color: var(--dm-bg-secondary) !important;
+    }
 
-  /* テーブルの階層による色分け */
-  table table table {
-    background-color: #333336 !important;
-  }
+    /* メインコンテンツエリアの背景色 */
+    table > tbody > tr > td {
+      background-color: var(--dm-bg-tertiary) !important;
+    }
 
-  /* テーブルセルの背景色処理 - 階層に応じた色分け */
-  td:not([style*="background"]):not([bgcolor]) {
-    background-color: inherit !important;
-  }
+    /* テキストカラー */
+    body * {
+      color: var(--dm-text-primary) !important;
+    }
 
-  /* カード状のコンテンツ */
-  [style*="box-shadow"],
-  [style*="border-radius"] {
-    background-color: #2d2d30 !important;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
-  }
+    /* ヘッダーのテキスト色（#283b4a の部分） */
+    [style*="color: #283b4a"],
+    [style*="color: rgb(40,59,74)"] {
+      color: var(--dm-text-accent) !important;
+    }
 
-  /* テキストカラーの基本設定 - コントラスト改善 */
-  body *:not([style*="color"]):not(a):not(img):not(h1):not(h2):not(h3):not(h4):not(h5):not(h6) {
-    color: #f1f1f1 !important;
-  }
+    /* ボタンの処理 */
+    [style*="background-color: #03ae00"],
+    [style*="background-color: rgb(3,174,0)"] {
+      background-color: #03ae00 !important;
+      filter: brightness(1.2) !important;
+    }
 
-  /* 見出し要素 */
-  h1, h2, h3, h4, h5, h6 {
-    color: #ffffff !important;
-    font-weight: 500 !important;
-  }
+    [style*="background-color: #03ae00"] *,
+    [style*="background-color: rgb(3,174,0)"] * {
+      color: #ffffff !important;
+    }
 
-  /* 二次的なテキスト */
-  .secondary-text,
-  small,
-  .small,
-  time,
-  .timestamp,
-  .meta-info {
-    color: #a0a0a0 !important;
-  }
-
-  /* 引用テキスト */
-  blockquote,
-  .quote {
-    color: #b8b8b8 !important;
-    border-left: 3px solid #404040 !important;
-    padding-left: 10px !important;
-  }
-
-  /* リンクの処理 - Outlook風の控えめな強調 */
-  a:not([style*="color"]) {
-    color: #c8c8c8 !important;
-    text-decoration: none !important;
-  }
-  a:not([style*="color"]):hover {
-    color: #ffffff !important;
-    background-color: rgba(255, 255, 255, 0.05) !important;
-  }
-
-  /* ボタン要素の処理 */
-  button,
-  input[type="button"],
-  input[type="submit"] {
-    background-color: #3c3c3c !important;
-    color: #f1f1f1 !important;
-    border: 1px solid #4a4a4a !important;
-  }
-
-  button:hover,
-  input[type="button"]:hover,
-  input[type="submit"]:hover {
-    background-color: #454545 !important;
-    border-color: #5a5a5a !important;
-  }
-
-  /* フォーム要素の処理 */
-  input, textarea, select {
-    background-color: #333336 !important;
-    color: #f1f1f1 !important;
-    border: 1px solid #404040 !important;
-  }
-
-  /* ボーダー色の調整 - より明確な区切り */
-  [style*="border"] {
-    border-color: #404040 !important;
-  }
-
-  /* 画像の処理 - より自然な見え方に */
-  img:not([src^="data:"]) {
-    filter: brightness(0.9) contrast(1.1) saturate(0.95) !important;
-  }
-`;
+    /* 二次的なテキスト */
+    .secondary-text,
+    small,
+    .small,
+    time,
+    .timestamp {
+      color: var(--dm-text-secondary) !important;
+    }
+  `;
+}
 
 // カラー処理ユーティリティ
 class ColorUtils {
@@ -161,6 +134,95 @@ class ColorUtils {
     const darkG = Math.floor(g * darkFactor);
     const darkB = Math.floor(b * darkFactor);
     return `rgb(${darkR}, ${darkG}, ${darkB})`;
+  }
+
+  static parseColor(color: string): RGBColor | null {
+    const rgb = color.match(/\d+/g);
+    if (!rgb || rgb.length !== 3) return null;
+    
+    return {
+      r: Number(rgb[0]),
+      g: Number(rgb[1]),
+      b: Number(rgb[2])
+    };
+  }
+
+  static isBrandColor(color: RGBColor): boolean {
+    const brandColors = [
+      { r: 3, g: 174, b: 0 },   // #03ae00
+      { r: 204, g: 0, b: 51 },  // #cc0033
+      { r: 0, g: 67, b: 134 }   // #004386
+    ];
+    
+    return brandColors.some(bc =>
+      Math.abs(bc.r - color.r) < 5 &&
+      Math.abs(bc.g - color.g) < 5 &&
+      Math.abs(bc.b - color.b) < 5
+    );
+  }
+
+  static calculateRelativeBrightness(color: RGBColor, parentBrightness: number): number {
+    const baseBrightness = this.calculateBrightness(color);
+    const delta = parentBrightness - baseBrightness;
+    return Math.min(Math.max(baseBrightness + delta * 0.3, 20), 80);
+  }
+
+  static getParentBrightness(element: HTMLElement): number {
+    let parent = element.parentElement;
+    while (parent) {
+      const bgColor = window.getComputedStyle(parent).backgroundColor;
+      const parsed = this.parseColor(bgColor);
+      if (parsed) {
+        return this.calculateBrightness(parsed);
+      }
+      parent = parent.parentElement;
+    }
+    return 20; // デフォルト暗めの背景
+  }
+
+  static getReadableContrast(textColor: RGBColor, bgColor: string): string {
+    const bg = this.parseColor(bgColor) || { r: 32, g: 33, b: 36 };
+    const textLuminance = this.calculateLuminance(textColor);
+    const bgLuminance = this.calculateLuminance(bg);
+    const contrastRatio = (Math.max(textLuminance, bgLuminance) + 0.05) /
+                         (Math.min(textLuminance, bgLuminance) + 0.05);
+
+    return contrastRatio >= 4.5 ? 
+      `rgb(${textColor.r},${textColor.g},${textColor.b})` :
+      textLuminance > bgLuminance ? '#e8eaed' : '#202124';
+  }
+
+  // 輝度計算メソッドの追加
+  static calculateLuminance(color: RGBColor): number {
+    const { r, g, b } = color;
+    const [rs, gs, bs] = [r / 255, g / 255, b / 255].map(val => {
+      return val <= 0.03928
+        ? val / 12.92
+        : Math.pow((val + 0.055) / 1.055, 2.4);
+    });
+    return rs * 0.2126 + gs * 0.7152 + bs * 0.0722;
+  }
+
+  // コントラストテキスト取得メソッドの追加
+  static getContrastText(color: RGBColor): string {
+    const luminance = this.calculateLuminance(color);
+    return luminance > 0.5 ? '#000000' : '#ffffff';
+  }
+
+  // 色調整メソッドの追加
+  static adjustColor(color: RGBColor, targetBrightness: number): string {
+    const currentBrightness = this.calculateBrightness(color);
+    const factor = targetBrightness / currentBrightness;
+    
+    return `rgb(${Math.min(Math.round(color.r * factor), 255)}, 
+                ${Math.min(Math.round(color.g * factor), 255)}, 
+                ${Math.min(Math.round(color.b * factor), 255)})`;
+  }
+
+  // 色調整が必要かどうかの判定メソッドの追加
+  static needsAdjustment(color: RGBColor): boolean {
+    const brightness = this.calculateBrightness(color);
+    return brightness > 128; // 明るい色の場合は調整が必要
   }
 }
 
@@ -409,54 +471,51 @@ function applyDarkMode(html: string): string {
   const doc = new DOMParser().parseFromString(html, 'text/html');
   
   try {
-    // スタイルの適用
+    // 既存のダークモードスタイルを削除
     const existingDarkMode = doc.getElementById('gmail-dark-mode-emulation');
     if (existingDarkMode) {
       existingDarkMode.remove();
     }
 
+    // 新しいスタイルを最優先で適用
     const style = doc.createElement('style');
     style.id = 'gmail-dark-mode-emulation';
     style.textContent = createDarkModeStyles();
-    doc.head.appendChild(style);
+    doc.head.insertBefore(style, doc.head.firstChild);
 
-    // 背景色を持つ要素の処理
-    doc.querySelectorAll<HTMLElement>('[style*="background"]').forEach(element => {
-      const computedStyle = window.getComputedStyle(element);
-      const bgColor = computedStyle.backgroundColor;
-      
-      if (bgColor && bgColor !== 'transparent' && bgColor !== 'rgba(0, 0, 0, 0)') {
-        const rgb = ColorUtils.parseRGB(bgColor);
-        if (!rgb) return;
+    // インラインスタイルの処理
+    doc.querySelectorAll<HTMLElement>('[style]').forEach(element => {
+      const currentStyle = element.getAttribute('style') || '';
+      if (currentStyle.includes('background-color') || currentStyle.includes('color')) {
+        const computedStyle = window.getComputedStyle(element);
+        const bgColor = computedStyle.backgroundColor;
+        const textColor = computedStyle.color;
 
-        const brightness = ColorUtils.calculateBrightness(rgb);
-        if (brightness > 128) {
-          const darkFactor = ElementUtils.getDarkFactor(element);
-          element.style.backgroundColor = ColorUtils.applyDarkFactor(rgb, darkFactor);
-          ElementUtils.adjustTextColor(element);
+        // 背景色の処理
+        if (bgColor && bgColor !== 'transparent' && bgColor !== 'rgba(0, 0, 0, 0)') {
+          const parsedColor = ColorUtils.parseColor(bgColor);
+          if (parsedColor && !ColorUtils.isBrandColor(parsedColor)) {
+            element.style.backgroundColor = ColorUtils.adjustColor(
+              parsedColor,
+              ColorUtils.calculateRelativeBrightness(parsedColor, 20)
+            );
+          }
+        }
+
+        // テキスト色の処理
+        if (textColor) {
+          const parsedColor = ColorUtils.parseColor(textColor);
+          if (parsedColor && ColorUtils.needsAdjustment(parsedColor)) {
+            element.style.color = DARK_MODE_COLORS.text.primary;
+          }
         }
       }
-    });
-
-    // 画像の処理
-    doc.querySelectorAll<HTMLImageElement>('img').forEach(img => {
-      if (img.src.startsWith('data:')) return;
-
-      const parent = img.parentElement;
-      if (!parent) return;
-
-      const parentBg = window.getComputedStyle(parent).backgroundColor;
-      const isLightParent = ColorUtils.isLightBackground(parentBg);
-      
-      img.style.filter = isLightParent
-        ? 'brightness(0.85) contrast(1.1) saturate(0.95)'
-        : 'brightness(0.9) contrast(1.05) saturate(0.98)';
     });
 
     contentDarkMode = true;
     return doc.documentElement.outerHTML;
   } catch (error) {
-    console.error('ダークモード適用中にエラーが発生:', error);
+    console.error('ダークモード適用エラー:', error);
     throw error;
   }
 }

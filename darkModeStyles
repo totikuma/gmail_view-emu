@@ -1,0 +1,36 @@
+/* 階層型背景色システム */
+body {
+  background-color: #1a1a1a !important;
+}
+
+[bgcolor="#FFFFFF"],
+[style*="background-color: #fff"],
+[style*="background-color: rgb(255"] {
+  background-color: var(--bg-level-1, #2d2d2d) !important;
+}
+
+table > tbody > tr > td {
+  background-color: var(--bg-level-2, #333333) !important;
+}
+
+/* テキストカラーシステム */
+* {
+  color: var(--text-primary, #e8eaed) !important;
+}
+
+[style*="color: #283b4a"],
+[style*="color: rgb(40,59,74)"] {
+  color: var(--text-accent, #8ab4f8) !important;
+}
+
+/* ボタン例外処理 */
+[style*="background-color: #03ae00"],
+[style*="background-color: rgb(3,174,0)"] {
+  background-color: #03ae00 !important;
+  filter: brightness(1.2) contrast(1.1);
+  
+  * {
+    color: #ffffff !important;
+    text-decoration: none !important;
+  }
+} 
